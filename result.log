@@ -1,0 +1,89 @@
+?   	github.com/abeselom-personal/go-ai-service/cmd	[no test files]
+?   	github.com/abeselom-personal/go-ai-service/internal/config	[no test files]
+?   	github.com/abeselom-personal/go-ai-service/internal/database	[no test files]
+?   	github.com/abeselom-personal/go-ai-service/internal/model	[no test files]
+=== RUN   TestModelRepository_Create
+=== RUN   TestModelRepository_Create/success
+--- PASS: TestModelRepository_Create (0.00s)
+    --- PASS: TestModelRepository_Create/success (0.00s)
+=== RUN   TestModelRepository_Create_InvalidProviderID
+--- PASS: TestModelRepository_Create_InvalidProviderID (0.00s)
+=== RUN   TestModelRepository_Create_Duplicate
+
+2025/05/18 12:11:30 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/model_repository.go:41 [35;1mduplicated key not allowed
+[0m[33m[0.078ms] [34;1m[rows:0][0m INSERT INTO "models" ("provider_id","name","parameters","config","created_at","updated_at","id") VALUES ('75151887-42d0-45e4-967c-43557195b767','duplicate-model','','','2025-05-18 12:11:30.98','2025-05-18 12:11:30.98','a306c103-65af-4570-bbd9-8024f40104ac') RETURNING "id"
+--- PASS: TestModelRepository_Create_Duplicate (0.00s)
+=== RUN   TestModelRepository_GetByID
+=== RUN   TestModelRepository_GetByID/found
+=== RUN   TestModelRepository_GetByID/not_found
+
+2025/05/18 12:11:30 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/model_repository.go:52 [35;1mrecord not found
+[0m[33m[0.019ms] [34;1m[rows:0][0m SELECT * FROM "models" WHERE id = 'nonexistent' ORDER BY "models"."id" LIMIT 1
+--- PASS: TestModelRepository_GetByID (0.00s)
+    --- PASS: TestModelRepository_GetByID/found (0.00s)
+    --- PASS: TestModelRepository_GetByID/not_found (0.00s)
+=== RUN   TestModelRepository_GetByProviderAndName
+=== RUN   TestModelRepository_GetByProviderAndName/found
+=== RUN   TestModelRepository_GetByProviderAndName/not_found
+
+2025/05/18 12:11:30 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/model_repository.go:64 [35;1mrecord not found
+[0m[33m[0.031ms] [34;1m[rows:0][0m SELECT * FROM "models" WHERE provider_id = 'e0747cdb-c926-43ca-840d-9d57ee3c8a47' AND name = 'nonexistent' ORDER BY "models"."id" LIMIT 1
+--- PASS: TestModelRepository_GetByProviderAndName (0.00s)
+    --- PASS: TestModelRepository_GetByProviderAndName/found (0.00s)
+    --- PASS: TestModelRepository_GetByProviderAndName/not_found (0.00s)
+=== RUN   TestModelRepository_ListByProvider
+=== RUN   TestModelRepository_ListByProvider/success
+=== RUN   TestModelRepository_ListByProvider/empty
+--- PASS: TestModelRepository_ListByProvider (0.00s)
+    --- PASS: TestModelRepository_ListByProvider/success (0.00s)
+    --- PASS: TestModelRepository_ListByProvider/empty (0.00s)
+=== RUN   TestModelRepository_Update
+=== RUN   TestModelRepository_Update/success
+=== RUN   TestModelRepository_Update/not_found
+--- PASS: TestModelRepository_Update (0.00s)
+    --- PASS: TestModelRepository_Update/success (0.00s)
+    --- PASS: TestModelRepository_Update/not_found (0.00s)
+=== RUN   TestModelRepository_Delete
+=== RUN   TestModelRepository_Delete/success
+=== RUN   TestModelRepository_Delete/not_found
+--- PASS: TestModelRepository_Delete (0.00s)
+    --- PASS: TestModelRepository_Delete/success (0.00s)
+    --- PASS: TestModelRepository_Delete/not_found (0.00s)
+=== RUN   TestProviderRepository_Create
+=== RUN   TestProviderRepository_Create/success
+--- PASS: TestProviderRepository_Create (0.00s)
+    --- PASS: TestProviderRepository_Create/success (0.00s)
+=== RUN   TestProviderRepository_GetByID
+=== RUN   TestProviderRepository_GetByID/success
+--- PASS: TestProviderRepository_GetByID (0.00s)
+    --- PASS: TestProviderRepository_GetByID/success (0.00s)
+=== RUN   TestProviderRepository_Create_Invalid
+=== RUN   TestProviderRepository_Create_Invalid/empty_name
+--- PASS: TestProviderRepository_Create_Invalid (0.00s)
+    --- PASS: TestProviderRepository_Create_Invalid/empty_name (0.00s)
+=== RUN   TestProviderRepository_GetByName
+=== RUN   TestProviderRepository_GetByName/found
+=== RUN   TestProviderRepository_GetByName/not_found
+
+2025/05/18 12:11:30 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/provider_repository.go:66 [35;1mrecord not found
+[0m[33m[0.018ms] [34;1m[rows:0][0m SELECT * FROM "providers" WHERE name = 'nonexistent' ORDER BY "providers"."id" LIMIT 1
+--- PASS: TestProviderRepository_GetByName (0.00s)
+    --- PASS: TestProviderRepository_GetByName/found (0.00s)
+    --- PASS: TestProviderRepository_GetByName/not_found (0.00s)
+=== RUN   TestProviderRepository_Update
+=== RUN   TestProviderRepository_Update/success
+=== RUN   TestProviderRepository_Update/not_found
+--- PASS: TestProviderRepository_Update (0.00s)
+    --- PASS: TestProviderRepository_Update/success (0.00s)
+    --- PASS: TestProviderRepository_Update/not_found (0.00s)
+=== RUN   TestProviderRepository_Delete
+=== RUN   TestProviderRepository_Delete/success
+=== RUN   TestProviderRepository_Delete/not_found
+--- PASS: TestProviderRepository_Delete (0.00s)
+    --- PASS: TestProviderRepository_Delete/success (0.00s)
+    --- PASS: TestProviderRepository_Delete/not_found (0.00s)
+PASS
+ok  	github.com/abeselom-personal/go-ai-service/internal/repository	0.007s
+?   	github.com/abeselom-personal/go-ai-service/internal/repository/mocks	[no test files]
+FAIL	github.com/abeselom-personal/go-ai-service/internal/service [build failed]
+FAIL

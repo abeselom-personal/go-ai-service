@@ -1,0 +1,64 @@
+server:
+  port: 8080
+  read_timeout: 15s
+  write_timeout: 15s
+  idle_timeout: 60s
+
+database:
+  host: postgres
+  port: 5432
+  user: admin
+  password: secret
+  name: providers
+  ssl_mode: disable
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 1h
+  migration_enabled: true 
+
+security:
+  encryption_key: "UHROnUj/LjVL+x+jpMc/0HQWSc7f0YDh"
+  encryption_key_version: 1
+
+defaults:
+  provider: "OpenAI"
+  model: "gpt-4"
+  providers:
+    - name: "OpenAI"
+      base_url: "https://api.openai.com/v1"
+      api_key: "your-openai-key-here"  # Will be encrypted at runtime
+      default: true
+      models:
+        - name: "gpt-4"
+          parameters: '{"max_tokens": 4096}'
+          config: '{"temperature": 0.7}'
+        - name: "gpt-3.5-turbo"
+          parameters: '{"max_tokens": 2048}'
+          config: '{"temperature": 0.7}'
+
+    - name: "DeepSeek"
+      base_url: "https://api.deepseek.com/v1"
+      api_key: "your-deepseek-key-here"
+      models:
+        - name: "deepseek-chat"
+          parameters: '{"max_tokens": 4096}'
+          config: '{"temperature": 0.5}'
+
+    - name: "Gemini"
+      base_url: "https://generativelanguage.googleapis.com/v1beta"
+      api_key: "your-gemini-key-here"
+      models:
+        - name: "gemini-pro"
+          parameters: '{"maxOutputTokens": 2048}'
+          config: '{"temperature": 0.9}'
+
+logging:
+  level: info
+  format: json
+
+rate_limit:
+  enabled: true
+  requests: 100
+  window: "1m"
+  ip_whitelist:
+    - "127.0.0.1"
