@@ -7,7 +7,7 @@ import (
 	"github.com/abeselom-personal/go-ai-service/internal/config"
 	"github.com/abeselom-personal/go-ai-service/internal/database"
 	models "github.com/abeselom-personal/go-ai-service/internal/model"
-	"github.com/abeselom-personal/go-ai-service/internal/repository"
+	"github.com/abeselom-personal/go-ai-service/internal/routes"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -25,8 +25,7 @@ func main() {
 
 	// Setup database connection
 	db, err := database.NewPostgresDB(database.Config{
-		Host: cfg.Database.Host,
-		//fix this string conversion issue
+		Host:     cfg.Database.Host,
 		Port:     cfg.Database.Port,
 		User:     cfg.Database.User,
 		Password: cfg.Database.Password,
@@ -39,16 +38,15 @@ func main() {
 
 	// Auto migrate if enabled
 	if cfg.Database.MigrationEnabled {
-		if err := db.AutoMigrate(&models.Provider{}, &models.Model{}); err != nil {
+		if err := db.AutoMigrate(&models.AIUsageLog{}, &models.RateLimit{}, &models.SystemPrompt{}); err != nil {
 			logger.Fatal("failed to migrate database", zap.Error(err))
 		}
 	}
-	//inititalize repository
-	_ = repository.NewProviderRepository(db)
-	_ = repository.NewModelRepository(db)
 
 	// Initialize Gin router
 	router := gin.Default()
+
+	routes.RegisterRoutes(router, db, cfg)
 
 	// Start server
 	server := &http.Server{
@@ -58,7 +56,9 @@ func main() {
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
+
 	logger.Info("Starting server", zap.Int("port", cfg.Server.Port))
+
 	if err := server.ListenAndServe(); err != nil {
 		logger.Fatal("server failed to start", zap.Error(err))
 	}

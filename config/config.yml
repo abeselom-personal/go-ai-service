@@ -21,36 +21,26 @@ security:
   encryption_key_version: 1
 
 defaults:
-  provider: "OpenAI"
-  model: "gpt-4"
+  provider: "gemini"
+  model: "gemini-2.0-flash"
   providers:
-    - name: "OpenAI"
-      base_url: "https://api.openai.com/v1"
-      api_key: "your-openai-key-here"  # Will be encrypted at runtime
-      default: true
+    - name: "gemini"
+      base_url: "https://generativelanguage.googleapis.com/v1beta/models/"
+      api_key: "${GEMINI_API_KEY}"
+      auth_method: "query_param"
       models:
-        - name: "gpt-4"
-          parameters: '{"max_tokens": 4096}'
-          config: '{"temperature": 0.7}'
-        - name: "gpt-3.5-turbo"
-          parameters: '{"max_tokens": 2048}'
-          config: '{"temperature": 0.7}'
-
-    - name: "DeepSeek"
-      base_url: "https://api.deepseek.com/v1"
-      api_key: "your-deepseek-key-here"
-      models:
-        - name: "deepseek-chat"
-          parameters: '{"max_tokens": 4096}'
-          config: '{"temperature": 0.5}'
-
-    - name: "Gemini"
-      base_url: "https://generativelanguage.googleapis.com/v1beta"
-      api_key: "your-gemini-key-here"
-      models:
-        - name: "gemini-pro"
-          parameters: '{"maxOutputTokens": 2048}'
-          config: '{"temperature": 0.9}'
+        - name: "gemini-2.0-flash"
+          parameters: '{"temperature": 0.9, "maxOutputTokens": 100}'
+          config: |
+            {
+              "contents": [{
+                "parts": [
+                  {"text": "{{.SystemPrompt}}"},
+                  {"text": "{{.UserPrompt}}"}
+                ]
+              }]
+            }
+          response_path: "candidates.0.content.parts.0.text"
 
 logging:
   level: info

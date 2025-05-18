@@ -1,89 +1,104 @@
-?   	github.com/abeselom-personal/go-ai-service/cmd	[no test files]
+FAIL	github.com/abeselom-personal/go-ai-service/cmd [build failed]
 ?   	github.com/abeselom-personal/go-ai-service/internal/config	[no test files]
+?   	github.com/abeselom-personal/go-ai-service/internal/controller	[no test files]
 ?   	github.com/abeselom-personal/go-ai-service/internal/database	[no test files]
 ?   	github.com/abeselom-personal/go-ai-service/internal/model	[no test files]
-=== RUN   TestModelRepository_Create
-=== RUN   TestModelRepository_Create/success
---- PASS: TestModelRepository_Create (0.00s)
-    --- PASS: TestModelRepository_Create/success (0.00s)
-=== RUN   TestModelRepository_Create_InvalidProviderID
---- PASS: TestModelRepository_Create_InvalidProviderID (0.00s)
-=== RUN   TestModelRepository_Create_Duplicate
+=== RUN   TestSystemPromptRepo_CRUD
 
-2025/05/18 12:11:30 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/model_repository.go:41 [35;1mduplicated key not allowed
-[0m[33m[0.078ms] [34;1m[rows:0][0m INSERT INTO "models" ("provider_id","name","parameters","config","created_at","updated_at","id") VALUES ('75151887-42d0-45e4-967c-43557195b767','duplicate-model','','','2025-05-18 12:11:30.98','2025-05-18 12:11:30.98','a306c103-65af-4570-bbd9-8024f40104ac') RETURNING "id"
---- PASS: TestModelRepository_Create_Duplicate (0.00s)
-=== RUN   TestModelRepository_GetByID
-=== RUN   TestModelRepository_GetByID/found
-=== RUN   TestModelRepository_GetByID/not_found
+2025/05/18 19:02:08 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:19 [35;1mnear "(": syntax error
+[0m[33m[0.012ms] [34;1m[rows:0][0m CREATE TABLE `system_prompts` (`id` uuid DEFAULT gen_random_uuid(),`module_name` text NOT NULL,`provider` text NOT NULL,`system_prompt` text NOT NULL,`user_prompt` text NOT NULL,`prompt_hash` text NOT NULL,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,PRIMARY KEY (`id`))
+    system_prompt_repository_test.go:20: 
+        	Error Trace:	/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:20
+        	            				/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:25
+        	Error:      	Received unexpected error:
+        	            	near "(": syntax error
+        	Test:       	TestSystemPromptRepo_CRUD
 
-2025/05/18 12:11:30 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/model_repository.go:52 [35;1mrecord not found
-[0m[33m[0.019ms] [34;1m[rows:0][0m SELECT * FROM "models" WHERE id = 'nonexistent' ORDER BY "models"."id" LIMIT 1
---- PASS: TestModelRepository_GetByID (0.00s)
-    --- PASS: TestModelRepository_GetByID/found (0.00s)
-    --- PASS: TestModelRepository_GetByID/not_found (0.00s)
-=== RUN   TestModelRepository_GetByProviderAndName
-=== RUN   TestModelRepository_GetByProviderAndName/found
-=== RUN   TestModelRepository_GetByProviderAndName/not_found
+2025/05/18 19:02:08 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository.go:27 [35;1mno such table: system_prompts
+[0m[33m[0.052ms] [34;1m[rows:0][0m INSERT INTO `system_prompts` (`module_name`,`provider`,`system_prompt`,`user_prompt`,`prompt_hash`,`created_at`,`updated_at`,`deleted_at`,`id`) VALUES ("test-module","ChatGPT","You are a helper.","What's the weather?","abc123","2025-05-18 19:02:08.889","2025-05-18 19:02:08.889",NULL,"acd3459d-51e6-4783-b611-5af3d2cf30ed") RETURNING `id`
+    system_prompt_repository_test.go:39: 
+        	Error Trace:	/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:39
+        	Error:      	Received unexpected error:
+        	            	no such table: system_prompts
+        	Test:       	TestSystemPromptRepo_CRUD
 
-2025/05/18 12:11:30 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/model_repository.go:64 [35;1mrecord not found
-[0m[33m[0.031ms] [34;1m[rows:0][0m SELECT * FROM "models" WHERE provider_id = 'e0747cdb-c926-43ca-840d-9d57ee3c8a47' AND name = 'nonexistent' ORDER BY "models"."id" LIMIT 1
---- PASS: TestModelRepository_GetByProviderAndName (0.00s)
-    --- PASS: TestModelRepository_GetByProviderAndName/found (0.00s)
-    --- PASS: TestModelRepository_GetByProviderAndName/not_found (0.00s)
-=== RUN   TestModelRepository_ListByProvider
-=== RUN   TestModelRepository_ListByProvider/success
-=== RUN   TestModelRepository_ListByProvider/empty
---- PASS: TestModelRepository_ListByProvider (0.00s)
-    --- PASS: TestModelRepository_ListByProvider/success (0.00s)
-    --- PASS: TestModelRepository_ListByProvider/empty (0.00s)
-=== RUN   TestModelRepository_Update
-=== RUN   TestModelRepository_Update/success
-=== RUN   TestModelRepository_Update/not_found
---- PASS: TestModelRepository_Update (0.00s)
-    --- PASS: TestModelRepository_Update/success (0.00s)
-    --- PASS: TestModelRepository_Update/not_found (0.00s)
-=== RUN   TestModelRepository_Delete
-=== RUN   TestModelRepository_Delete/success
-=== RUN   TestModelRepository_Delete/not_found
---- PASS: TestModelRepository_Delete (0.00s)
-    --- PASS: TestModelRepository_Delete/success (0.00s)
-    --- PASS: TestModelRepository_Delete/not_found (0.00s)
-=== RUN   TestProviderRepository_Create
-=== RUN   TestProviderRepository_Create/success
---- PASS: TestProviderRepository_Create (0.00s)
-    --- PASS: TestProviderRepository_Create/success (0.00s)
-=== RUN   TestProviderRepository_GetByID
-=== RUN   TestProviderRepository_GetByID/success
---- PASS: TestProviderRepository_GetByID (0.00s)
-    --- PASS: TestProviderRepository_GetByID/success (0.00s)
-=== RUN   TestProviderRepository_Create_Invalid
-=== RUN   TestProviderRepository_Create_Invalid/empty_name
---- PASS: TestProviderRepository_Create_Invalid (0.00s)
-    --- PASS: TestProviderRepository_Create_Invalid/empty_name (0.00s)
-=== RUN   TestProviderRepository_GetByName
-=== RUN   TestProviderRepository_GetByName/found
-=== RUN   TestProviderRepository_GetByName/not_found
+2025/05/18 19:02:08 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository.go:32 [35;1mno such table: system_prompts
+[0m[33m[0.016ms] [34;1m[rows:0][0m SELECT * FROM `system_prompts` WHERE prompt_hash = "abc123" AND `system_prompts`.`deleted_at` IS NULL ORDER BY `system_prompts`.`id` LIMIT 1
+    system_prompt_repository_test.go:43: 
+        	Error Trace:	/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:43
+        	Error:      	Received unexpected error:
+        	            	no such table: system_prompts
+        	Test:       	TestSystemPromptRepo_CRUD
+    system_prompt_repository_test.go:44: 
+        	Error Trace:	/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:44
+        	Error:      	Not equal: 
+        	            	expected: uuid.UUID{0xac, 0xd3, 0x45, 0x9d, 0x51, 0xe6, 0x47, 0x83, 0xb6, 0x11, 0x5a, 0xf3, 0xd2, 0xcf, 0x30, 0xed}
+        	            	actual  : uuid.UUID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1,3 +1,3 @@
+        	            	 (uuid.UUID) (len=16) {
+        	            	- 00000000  ac d3 45 9d 51 e6 47 83  b6 11 5a f3 d2 cf 30 ed  |..E.Q.G...Z...0.|
+        	            	+ 00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+        	            	 }
+        	Test:       	TestSystemPromptRepo_CRUD
 
-2025/05/18 12:11:30 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/provider_repository.go:66 [35;1mrecord not found
-[0m[33m[0.018ms] [34;1m[rows:0][0m SELECT * FROM "providers" WHERE name = 'nonexistent' ORDER BY "providers"."id" LIMIT 1
---- PASS: TestProviderRepository_GetByName (0.00s)
-    --- PASS: TestProviderRepository_GetByName/found (0.00s)
-    --- PASS: TestProviderRepository_GetByName/not_found (0.00s)
-=== RUN   TestProviderRepository_Update
-=== RUN   TestProviderRepository_Update/success
-=== RUN   TestProviderRepository_Update/not_found
---- PASS: TestProviderRepository_Update (0.00s)
-    --- PASS: TestProviderRepository_Update/success (0.00s)
-    --- PASS: TestProviderRepository_Update/not_found (0.00s)
-=== RUN   TestProviderRepository_Delete
-=== RUN   TestProviderRepository_Delete/success
-=== RUN   TestProviderRepository_Delete/not_found
---- PASS: TestProviderRepository_Delete (0.00s)
-    --- PASS: TestProviderRepository_Delete/success (0.00s)
-    --- PASS: TestProviderRepository_Delete/not_found (0.00s)
-PASS
-ok  	github.com/abeselom-personal/go-ai-service/internal/repository	0.007s
-?   	github.com/abeselom-personal/go-ai-service/internal/repository/mocks	[no test files]
-FAIL	github.com/abeselom-personal/go-ai-service/internal/service [build failed]
+2025/05/18 19:02:08 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository.go:37 [35;1mno such table: system_prompts
+[0m[33m[0.026ms] [34;1m[rows:0][0m INSERT INTO `system_prompts` (`module_name`,`provider`,`system_prompt`,`user_prompt`,`prompt_hash`,`created_at`,`updated_at`,`deleted_at`) VALUES ("","","You are a very helpful assistant.","","","2025-05-18 19:02:08.889","2025-05-18 19:02:08.889",NULL) RETURNING `id`
+    system_prompt_repository_test.go:49: 
+        	Error Trace:	/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:49
+        	Error:      	Received unexpected error:
+        	            	no such table: system_prompts
+        	Test:       	TestSystemPromptRepo_CRUD
+
+2025/05/18 19:02:08 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository.go:32 [35;1mno such table: system_prompts
+[0m[33m[0.011ms] [34;1m[rows:0][0m SELECT * FROM `system_prompts` WHERE prompt_hash = "abc123" AND `system_prompts`.`deleted_at` IS NULL ORDER BY `system_prompts`.`id` LIMIT 1
+    system_prompt_repository_test.go:52: 
+        	Error Trace:	/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:52
+        	Error:      	Received unexpected error:
+        	            	no such table: system_prompts
+        	Test:       	TestSystemPromptRepo_CRUD
+    system_prompt_repository_test.go:53: 
+        	Error Trace:	/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:53
+        	Error:      	Not equal: 
+        	            	expected: "You are a very helpful assistant."
+        	            	actual  : ""
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-You are a very helpful assistant.
+        	            	+
+        	Test:       	TestSystemPromptRepo_CRUD
+
+2025/05/18 19:02:08 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository.go:46 [35;1mno such table: system_prompts
+[0m[33m[0.008ms] [34;1m[rows:0][0m SELECT * FROM `system_prompts` WHERE `system_prompts`.`deleted_at` IS NULL
+    system_prompt_repository_test.go:57: 
+        	Error Trace:	/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:57
+        	Error:      	Received unexpected error:
+        	            	no such table: system_prompts
+        	Test:       	TestSystemPromptRepo_CRUD
+    system_prompt_repository_test.go:58: 
+        	Error Trace:	/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:58
+        	Error:      	"[]" should have 1 item(s), but has 0
+        	Test:       	TestSystemPromptRepo_CRUD
+
+2025/05/18 19:02:08 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository.go:41 [35;1mno such table: system_prompts
+[0m[33m[0.029ms] [34;1m[rows:0][0m UPDATE `system_prompts` SET `deleted_at`="2025-05-18 19:02:08.889" WHERE id = "acd3459d-51e6-4783-b611-5af3d2cf30ed" AND `system_prompts`.`deleted_at` IS NULL
+    system_prompt_repository_test.go:62: 
+        	Error Trace:	/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository_test.go:62
+        	Error:      	Received unexpected error:
+        	            	no such table: system_prompts
+        	Test:       	TestSystemPromptRepo_CRUD
+
+2025/05/18 19:02:08 [31;1m/home/abeselom/Desktop/projects/open-source/go-ai-service/internal/repository/system_prompt_repository.go:32 [35;1mno such table: system_prompts
+[0m[33m[0.010ms] [34;1m[rows:0][0m SELECT * FROM `system_prompts` WHERE prompt_hash = "abc123" AND `system_prompts`.`deleted_at` IS NULL ORDER BY `system_prompts`.`id` LIMIT 1
+--- FAIL: TestSystemPromptRepo_CRUD (0.00s)
+FAIL
+FAIL	github.com/abeselom-personal/go-ai-service/internal/repository	0.004s
+?   	github.com/abeselom-personal/go-ai-service/internal/routes	[no test files]
+?   	github.com/abeselom-personal/go-ai-service/internal/service	[no test files]
 FAIL

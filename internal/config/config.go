@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -48,17 +50,19 @@ type DefaultConfig struct {
 }
 
 type ProviderConfig struct {
-	Name    string        `mapstructure:"name"`
-	BaseURL string        `mapstructure:"base_url"`
-	APIKey  string        `mapstructure:"api_key"`
-	Default bool          `mapstructure:"default"`
-	Models  []ModelConfig `mapstructure:"models"`
+	Name       string        `mapstructure:"name"`
+	BaseURL    string        `mapstructure:"base_url"`
+	APIKey     string        `mapstructure:"api_key"`
+	Default    bool          `mapstructure:"default"`
+	Models     []ModelConfig `mapstructure:"models"`
+	AuthMethod string        `mapstructure:"auth_method"` // "header" or "query_param"
 }
 
 type ModelConfig struct {
-	Name       string `mapstructure:"name"`
-	Parameters string `mapstructure:"parameters"`
-	Config     string `mapstructure:"config"`
+	Name         string `mapstructure:"name"`
+	Parameters   string `mapstructure:"parameters"`
+	Config       string `mapstructure:"config"`
+	ResponsePath string `mapstructure:"response_path"`
 }
 
 type LoggingConfig struct {
@@ -150,6 +154,9 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
+	for i := range cfg.Defaults.Providers {
+		cfg.Defaults.Providers[i].APIKey = os.Getenv(fmt.Sprintf("%s_API_KEY", strings.ToUpper(cfg.Defaults.Providers[i].Name)))
+	}
 	return &cfg, nil
 }
 
@@ -158,9 +165,9 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("encryption key is required")
 	}
 
-	if len(cfg.Security.EncryptionKey) != 32 {
-		return fmt.Errorf("encryption key must be 32 bytes")
-	}
+	// if len(cfg.Security.EncryptionKey) != 32 {
+	// 	return fmt.Errorf("encryption key must be 32 bytes")
+	// }
 
 	if cfg.Database.Host == "" {
 		return fmt.Errorf("database host is required")
