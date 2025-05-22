@@ -17,7 +17,7 @@ database:
   migration_enabled: true 
 
 security:
-  encryption_key: "UHROnUj/LjVL+x+jpMc/0HQWSc7f0YDh"
+  encryption_key: ""
   encryption_key_version: 1
 
 defaults:

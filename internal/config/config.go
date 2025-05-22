@@ -165,9 +165,10 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("encryption key is required")
 	}
 
-	// if len(cfg.Security.EncryptionKey) != 32 {
-	// 	return fmt.Errorf("encryption key must be 32 bytes")
-	// }
+	fmt.Println(cfg.Security.EncryptionKey)
+	if len(cfg.Security.EncryptionKey) != 32 {
+		return fmt.Errorf("encryption key must be 32 bytes")
+	}
 
 	if cfg.Database.Host == "" {
 		return fmt.Errorf("database host is required")

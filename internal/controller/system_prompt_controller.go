@@ -21,15 +21,15 @@ func NewSystemPromptController(svc *service.SystemPromptService) *SystemPromptCo
 func (c *SystemPromptController) Create(ctx *gin.Context) {
 	var req struct {
 		ModuleName   string `json:"module_name" binding:"required"`
+		ModelName    string `json:"model_name" binding:"required"`
 		Provider     string `json:"provider" binding:"required"`
 		SystemPrompt string `json:"system_prompt" binding:"required"`
-		UserPrompt   string `json:"user_prompt" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	prompt, err := c.svc.Create(ctx, req.ModuleName, req.Provider, req.SystemPrompt, req.UserPrompt)
+	prompt, err := c.svc.Create(ctx, req.ModuleName, req.Provider, req.SystemPrompt, req.ModelName)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -38,8 +38,7 @@ func (c *SystemPromptController) Create(ctx *gin.Context) {
 }
 
 func (c *SystemPromptController) Get(ctx *gin.Context) {
-	hash := ctx.Param("hash")
-	prompt, err := c.svc.Get(ctx, hash)
+	prompt, err := c.svc.Get(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Prompt not found"})
 		return

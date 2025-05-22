@@ -18,7 +18,6 @@ import (
 	"github.com/abeselom-personal/go-ai-service/internal/config"
 	models "github.com/abeselom-personal/go-ai-service/internal/model"
 	"github.com/abeselom-personal/go-ai-service/internal/repository"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -38,36 +37,31 @@ func hashPrompt(systemPrompt, userPrompt, moduleName string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func (s *SystemPromptService) Create(ctx context.Context, module, provider, sys, user string) (*models.SystemPrompt, error) {
-	hash := hashPrompt(sys, user, module)
-	existing, _ := s.repo.GetByHash(ctx, hash)
-	if existing != nil && existing.ID != uuid.Nil {
-		return existing, nil
-	}
+func (s *SystemPromptService) Create(ctx context.Context, module, provider, sys, modelname string) (*models.SystemPrompt, error) {
 
 	sp := &models.SystemPrompt{
 		ModuleName:   module,
+		ModelName:    modelname,
 		Provider:     provider,
 		SystemPrompt: sys,
-		UserPrompt:   user,
-		PromptHash:   hash,
 	}
 	err := s.repo.Create(ctx, sp)
 	return sp, err
 }
 
-func (s *SystemPromptService) Get(ctx context.Context, hash string) (*models.SystemPrompt, error) {
-	return s.repo.GetByHash(ctx, hash)
+func (s *SystemPromptService) Get(ctx context.Context) ([]models.SystemPrompt, error) {
+	return s.repo.List(ctx)
 }
 
+func (s *SystemPromptService) GetHash(ctx context.Context, hash string) (*models.SystemPrompt, error) {
+	return s.repo.GetByHash(ctx, hash)
+}
 func (s *SystemPromptService) Update(ctx context.Context, id string, sys, user string) error {
 	var sp models.SystemPrompt
 	if err := s.db.WithContext(ctx).First(&sp, "id = ?", id).Error; err != nil {
 		return err
 	}
 	sp.SystemPrompt = sys
-	sp.UserPrompt = user
-	sp.PromptHash = hashPrompt(sys, user, sp.ModuleName)
 	return s.repo.Update(ctx, &sp)
 }
 
