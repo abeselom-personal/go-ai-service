@@ -444,7 +444,7 @@
             loader.style.display = 'block';
             
             try {
-                const res = await fetch('/api/system-prompts/');
+                const res = await fetch('/ai/api/system-prompts/');
                 if (!res.ok) throw new Error('Failed to fetch prompts');
                 prompts = await res.json();
                 renderPrompts();
@@ -470,7 +470,7 @@
                     system_prompt: document.getElementById('systemPrompt').value,
                 };
 
-                const response = await fetch('/api/system-prompts/', {
+                const response = await fetch('/ai/api/system-prompts/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
@@ -512,7 +512,7 @@
                     user_prompt: document.getElementById('editUserPrompt').value || '',
                 };
 
-                const response = await fetch(`/api/system-prompts/${id}`, {
+                const response = await fetch(`/ai/api/system-prompts/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
@@ -539,7 +539,7 @@
             if (!confirm('Are you sure you want to delete this prompt?')) return;
             
             try {
-                const response = await fetch(`/api/system-prompts/${id}`, {
+                const response = await fetch(`/ai/api/system-prompts/${id}`, {
                     method: 'DELETE'
                 });
 
@@ -632,7 +632,7 @@
             
             try {
                 const prompt = prompts.find(p => p.ID === select.value);
-                const response = await fetch('/api/system-prompts/send', {
+                const response = await fetch('/ai/api/system-prompts/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

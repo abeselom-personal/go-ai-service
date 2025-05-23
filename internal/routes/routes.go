@@ -21,13 +21,13 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
 	r.SetHTMLTemplate(tmpl)
 
-	r.GET("/", func(c *gin.Context) {
+	r.GET("/ai/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"Title": "AI System Prompts Manager",
 		})
 	})
 
-	api := r.Group("/api/system-prompts")
+	api := r.Group("/ai/api/system-prompts")
 	{
 		api.POST("/", ctrl.Create)
 		api.GET("/", ctrl.Get)
