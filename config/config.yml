@@ -14,7 +14,7 @@ database:
   max_idle_conns: 10
   max_open_conns: 100
   conn_max_lifetime: 1h
-  migration_enabled: true 
+  migration_enabled: false 
 
 security:
   encryption_key: ""
@@ -48,7 +48,7 @@ logging:
 
 rate_limit:
   enabled: true
-  requests: 100
+  requests: 1
   window: "1m"
   ip_whitelist:
     - "127.0.0.1"

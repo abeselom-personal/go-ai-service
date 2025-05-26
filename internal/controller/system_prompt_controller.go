@@ -87,12 +87,14 @@ func (c *SystemPromptController) Send(ctx *gin.Context) {
 	// Get cache control parameter
 	bypassCache, _ := strconv.ParseBool(ctx.Query("cache"))
 
+	clientIP := ctx.ClientIP()
 	response, err := c.svc.SendPrompt(
 		ctx,
 		req.ModuleName,
 		req.SystemPrompt,
 		req.UserPrompt,
 		bypassCache,
+		clientIP,
 	)
 
 	if err != nil {

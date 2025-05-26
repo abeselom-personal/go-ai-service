@@ -10,12 +10,13 @@ import (
 	"github.com/abeselom-personal/go-ai-service/internal/repository"
 	"github.com/abeselom-personal/go-ai-service/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )
 
-func RegisterRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
+func RegisterRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config, redisClient *redis.Client) {
 	repo := repository.NewSystemPromptRepo(db)
-	svc := service.NewSystemPromptService(db, repo, cfg)
+	svc := service.NewSystemPromptService(db, repo, cfg, redisClient)
 	ctrl := controller.NewSystemPromptController(svc)
 
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))

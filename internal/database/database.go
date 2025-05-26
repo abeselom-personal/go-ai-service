@@ -1,9 +1,12 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/abeselom-personal/go-ai-service/internal/config"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -43,4 +46,15 @@ func NewPostgresDB(cfg Config) (*gorm.DB, error) {
 	db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`)
 
 	return db, nil
+}
+
+func NewRedisClient(cfg config.RedisConfig) (*redis.Client, error) {
+	client := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Password: cfg.Password,
+		DB:       cfg.DB,
+	})
+
+	_, err := client.Ping(context.Background()).Result()
+	return client, err
 }

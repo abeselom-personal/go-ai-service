@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"text/template"
@@ -18,17 +19,19 @@ import (
 	"github.com/abeselom-personal/go-ai-service/internal/config"
 	models "github.com/abeselom-personal/go-ai-service/internal/model"
 	"github.com/abeselom-personal/go-ai-service/internal/repository"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )
 
 type SystemPromptService struct {
-	repo *repository.SystemPromptRepo
-	db   *gorm.DB
-	cfg  *config.Config
+	repo  *repository.SystemPromptRepo
+	db    *gorm.DB
+	cfg   *config.Config
+	redis *redis.Client
 }
 
-func NewSystemPromptService(db *gorm.DB, repo *repository.SystemPromptRepo, cfg *config.Config) *SystemPromptService {
-	return &SystemPromptService{repo: repo, db: db, cfg: cfg}
+func NewSystemPromptService(db *gorm.DB, repo *repository.SystemPromptRepo, cfg *config.Config, redis *redis.Client) *SystemPromptService {
+	return &SystemPromptService{repo: repo, db: db, cfg: cfg, redis: redis}
 }
 
 func hashPrompt(systemPrompt, userPrompt, moduleName string) string {
@@ -89,9 +92,13 @@ func (s *SystemPromptService) SendPrompt(
 	sys,
 	user string,
 	bypassCache bool,
+	clientIP string,
 ) (*models.AIUsageLog, error) {
 	hash := hashPrompt(sys, user, module)
 
+	if err := s.checkGlobalRateLimit(ctx, clientIP); err != nil {
+		return nil, err
+	}
 	// Check cache first unless bypass is requested
 	if !bypassCache {
 		cached, err := s.getCachedResponse(ctx, hash)
@@ -99,16 +106,11 @@ func (s *SystemPromptService) SendPrompt(
 			return cached, nil
 		}
 	}
-
 	// Proceed with API call
 	provider, model, err := s.getActiveProviderAndModel()
 	if err != nil {
 		return nil, err
 	}
-	// // Rate limit check
-	// if err := s.checkRateLimit(ctx, module, provider.Name); err != nil {
-	// 	return nil, err
-	// }
 
 	// Make API call
 	response, err := s.callAIAPI(ctx, provider, model, sys, user)
@@ -146,33 +148,6 @@ func (s *SystemPromptService) getCachedResponse(ctx context.Context, hash string
 	return &logEntry, nil
 }
 
-func (s *SystemPromptService) checkRateLimit(ctx context.Context, module, provider string) error {
-	var limit models.RateLimit
-	result := s.db.WithContext(ctx).
-		Where("module_name = ? AND provider = ?", module, provider).
-		First(&limit)
-
-	// Only enforce if rate limit exists
-	if result.Error == nil {
-		var count int64
-		start := time.Now().Add(-time.Duration(limit.PerSeconds) * time.Second)
-		err := s.db.Model(&models.AIUsageLog{}).
-			Where("module_name = ? AND provider = ? AND used_at >= ?", module, provider, start).
-			Count(&count).
-			Error
-
-		if err != nil {
-			return fmt.Errorf("failed to check usage: %w", err)
-		}
-
-		if count >= int64(limit.MaxRequests) {
-			return fmt.Errorf("rate limit exceeded for %s/%s (%d requests per %d seconds)",
-				module, provider, limit.MaxRequests, limit.PerSeconds)
-		}
-	}
-
-	return nil
-}
 func (s *SystemPromptService) callAIAPI(
 	ctx context.Context,
 	provider *config.ProviderConfig,
@@ -235,20 +210,20 @@ func (s *SystemPromptService) callAIAPI(
 }
 
 func (s *SystemPromptService) extractResponse(body []byte, path string) (string, error) {
-	var result interface{}
+	var result any
 	if err := json.Unmarshal(body, &result); err != nil {
 		return "", fmt.Errorf("invalid JSON response: %w", err)
 	}
 
 	// Simple JSON path implementation
 	parts := strings.Split(path, ".")
-	var current interface{} = result
+	var current any = result
 
 	for _, part := range parts {
 		switch v := current.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			current = v[part]
-		case []interface{}:
+		case []any:
 			index, err := strconv.Atoi(part)
 			if err != nil || index >= len(v) {
 				return "", fmt.Errorf("invalid array index in path")
@@ -263,4 +238,57 @@ func (s *SystemPromptService) extractResponse(body []byte, path string) (string,
 		return str, nil
 	}
 	return "", fmt.Errorf("response text not found at path")
+}
+func (s *SystemPromptService) checkGlobalRateLimit(ctx context.Context, clientIP string) error {
+
+	fmt.Printf("Rate Limit Config: %+v\n", s.cfg.RateLimit)
+	fmt.Printf("Environment RATE_LIMIT_ENABLED: %s\n", os.Getenv("RATE_LIMIT_ENABLED"))
+
+	fmt.Println("Checking rate limit")
+	fmt.Println("Checking rate limit")
+	fmt.Println(clientIP)
+	fmt.Println(clientIP)
+	if !s.cfg.RateLimit.Enabled {
+		return nil
+	}
+
+	for _, ip := range s.cfg.RateLimit.IPWhitelist {
+		if ip == clientIP {
+			return nil
+		}
+	}
+
+	window, _ := time.ParseDuration(s.cfg.RateLimit.Window)
+	key := fmt.Sprintf("rl:global:%s", clientIP)
+	count, _ := s.redis.Incr(ctx, key).Result()
+	if count == 1 {
+		s.redis.Expire(ctx, key, window)
+	}
+
+	if count > int64(s.cfg.RateLimit.Requests) {
+		return fmt.Errorf("global rate limit exceeded")
+	}
+	return nil
+}
+
+func (s *SystemPromptService) checkRateLimit(ctx context.Context, module string, provider string) error {
+	var limit models.RateLimit
+	if err := s.db.Where("module_name = ? AND provider = ?", module, provider).First(&limit).Error; err != nil {
+		return nil
+	}
+
+	key := fmt.Sprintf("rl:%s:%s", module, provider)
+	count, err := s.redis.Incr(ctx, key).Result()
+	if err != nil {
+		return err
+	}
+
+	if count == 1 {
+		s.redis.Expire(ctx, key, time.Duration(limit.PerSeconds)*time.Second)
+	}
+
+	if count > int64(limit.MaxRequests) {
+		return fmt.Errorf("service rate limit exceeded")
+	}
+	return nil
 }

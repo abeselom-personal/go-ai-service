@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/abeselom-personal/go-ai-service/internal/config"
@@ -9,12 +10,17 @@ import (
 	models "github.com/abeselom-personal/go-ai-service/internal/model"
 	"github.com/abeselom-personal/go-ai-service/internal/routes"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
 func main() {
 	// Load configuration
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	}
 	cfg, err := config.LoadConfig("./config")
+
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
@@ -42,11 +48,19 @@ func main() {
 			logger.Fatal("failed to migrate database", zap.Error(err))
 		}
 	}
-
+	redisClient, err := database.NewRedisClient(config.RedisConfig{
+		Host:     cfg.Redis.Host,
+		Port:     cfg.Redis.Port,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+	if err != nil {
+		logger.Fatal("Redis connection failed", zap.Error(err))
+	}
 	// Initialize Gin router
 	router := gin.Default()
 
-	routes.RegisterRoutes(router, db, cfg)
+	routes.RegisterRoutes(router, db, cfg, redisClient)
 
 	// Start server
 	server := &http.Server{

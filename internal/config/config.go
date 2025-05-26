@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,7 +16,8 @@ type Config struct {
 	Security  SecurityConfig
 	Defaults  DefaultConfig
 	Logging   LoggingConfig
-	RateLimit RateLimitConfig
+	RateLimit RateLimitConfig `mapstructure:"rate_limit"` // This was missing
+	Redis     RedisConfig     `mapstructure:"redis"`
 }
 
 type ServerConfig struct {
@@ -77,6 +79,13 @@ type RateLimitConfig struct {
 	IPWhitelist []string `mapstructure:"ip_whitelist"`
 }
 
+type RedisConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
+}
+
 func LoadConfig(path string) (*Config, error) {
 	v := viper.New()
 
@@ -96,10 +105,10 @@ func LoadConfig(path string) (*Config, error) {
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 
-	v.SetDefault("rate_limit.enabled", false)
+	// Set default values for rate limiting
+	v.SetDefault("rate_limit.enabled", true)
 	v.SetDefault("rate_limit.requests", 100)
 	v.SetDefault("rate_limit.window", "1m")
-
 	// Bind environment variables to config paths
 	_ = v.BindEnv("server.port", "PORT")
 	_ = v.BindEnv("server.read_timeout", "READ_TIMEOUT")
@@ -126,10 +135,15 @@ func LoadConfig(path string) (*Config, error) {
 	_ = v.BindEnv("logging.level", "LOG_LEVEL")
 	_ = v.BindEnv("logging.format", "LOG_FORMAT")
 
-	_ = v.BindEnv("rate_limit.enabled", "RATE_LIMIT_ENABLED")
-	_ = v.BindEnv("rate_limit.requests", "RATE_LIMIT_REQUESTS")
-	_ = v.BindEnv("rate_limit.window", "RATE_LIMIT_WINDOW")
-	_ = v.BindEnv("rate_limit.ip_whitelist", "RATE_LIMIT_IP_WHITELIST")
+	v.SetDefault("rate_limit.enabled", true)
+	v.SetDefault("rate_limit.requests", 1)
+	v.SetDefault("rate_limit.window", "1m")
+	v.SetDefault("rate_limit.ip_whitelist", []string{"127.0.0.1"})
+
+	_ = v.BindEnv("redis.host", "REDIS_HOST")
+	_ = v.BindEnv("redis.port", "REDIS_PORT")
+	_ = v.BindEnv("redis.password", "REDIS_PASSWORD")
+	_ = v.BindEnv("redis.db", "REDIS_DB")
 	// Configuration sources
 	v.AddConfigPath(path)
 	v.SetConfigName("config")
@@ -145,7 +159,30 @@ func LoadConfig(path string) (*Config, error) {
 			return nil, fmt.Errorf("failed to read config file: %w", err)
 		}
 	}
+	fmt.Println("Before environment processing:")
+	fmt.Printf("Rate limit enabled: %v\n", v.GetBool("rate_limit.enabled"))
+	fmt.Printf("Rate limit requests: %v\n", v.GetFloat64("rate_limit.requests"))
 
+	// Explicit environment processing AFTER config file read
+	if enabled := os.Getenv("RATE_LIMIT_ENABLED"); enabled != "" {
+		v.Set("rate_limit.enabled", enabled == "true")
+	}
+	if requests := os.Getenv("RATE_LIMIT_REQUESTS"); requests != "" {
+		if val, err := strconv.ParseFloat(requests, 64); err == nil {
+			v.Set("rate_limit.requests", val)
+		}
+	}
+	if window := os.Getenv("RATE_LIMIT_WINDOW"); window != "" {
+		v.Set("rate_limit.window", window)
+	}
+	if ipWL := os.Getenv("RATE_LIMIT_IP_WHITELIST"); ipWL != "" {
+		v.Set("rate_limit.ip_whitelist", strings.Split(ipWL, ","))
+	}
+
+	// Add debug logging AFTER environment processing
+	fmt.Println("\nAfter environment processing:")
+	fmt.Printf("Rate limit enabled: %v\n", v.GetBool("rate_limit.enabled"))
+	fmt.Printf("Rate limit requests: %v\n", v.GetFloat64("rate_limit.requests"))
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
