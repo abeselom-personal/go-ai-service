@@ -30,14 +30,13 @@ defaults:
       auth_method: "query_param"
       models:
         - name: "gemini-2.0-flash"
-          parameters: '{"temperature": 0.9, "maxOutputTokens": 100}'
+          parameters: '{"temperature": 0.7, "maxOutputTokens": 500}'  # Increased tokens for JSON responses
           config: |
             {
               "contents": [{
-                "parts": [
-                  {"text": "{{.SystemPrompt}}"},
-                  {"text": "{{.UserPrompt}}"}
-                ]
+                "parts": [{
+                  "text": [[ printf "SYSTEM INSTRUCTIONS:\n%s\n\nUSER REQUEST:\n%s" .SystemPrompt .UserPrompt | json ]]
+                }]
               }]
             }
           response_path: "candidates.0.content.parts.0.text"
@@ -48,7 +47,7 @@ logging:
 
 rate_limit:
   enabled: true
-  requests: 1
+  requests: 10
   window: "1m"
   ip_whitelist:
     - "127.0.0.1"

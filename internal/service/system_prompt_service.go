@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"text/template"
@@ -154,19 +154,41 @@ func (s *SystemPromptService) callAIAPI(
 	model *config.ModelConfig,
 	sys, user string,
 ) (string, error) {
-	// Construct request body using template
-	tmpl, err := template.New("request").Parse(model.Config)
+	// Create a safe structure for template execution
+	type TemplateData struct {
+		SystemPrompt string
+		UserPrompt   string
+	}
+
+	// Escape special characters in prompts
+	data := TemplateData{
+		SystemPrompt: strings.ReplaceAll(sys, `"`, `\"`),
+		UserPrompt:   strings.ReplaceAll(user, `"`, `\"`),
+	}
+	// Create template with custom functions
+	tmpl := template.New("request").
+		Funcs(template.FuncMap{
+			"json": func(v any) string {
+				b, _ := json.Marshal(v)
+				return string(b)
+			},
+		}).
+		Delims("[[", "]]") // Use different delimiters to avoid conflict
+
+	tmpl, err := tmpl.Parse(model.Config)
 	if err != nil {
 		return "", fmt.Errorf("invalid request template: %w", err)
 	}
 
 	var bodyBuf bytes.Buffer
-	err = tmpl.Execute(&bodyBuf, struct {
-		SystemPrompt string
-		UserPrompt   string
-	}{sys, user})
-	if err != nil {
+	if err := tmpl.Execute(&bodyBuf, data); err != nil {
 		return "", fmt.Errorf("template execution failed: %w", err)
+	}
+
+	// Validate JSON before sending
+	if !json.Valid(bodyBuf.Bytes()) {
+		log.Printf("[DEBUG] Invalid JSON payload:\n%s", bodyBuf.String())
+		return "", fmt.Errorf("generated invalid JSON payload")
 	}
 
 	// Create HTTP request
@@ -199,55 +221,54 @@ func (s *SystemPromptService) callAIAPI(
 		body, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("API error (%d): %s", resp.StatusCode, string(body))
 	}
-
+	log.Printf("[DEBUG] Final request payload: %s", bodyBuf.String())
 	// Parse response
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response: %w", err)
 	}
-
 	return s.extractResponse(responseBody, model.ResponsePath)
+
 }
 
 func (s *SystemPromptService) extractResponse(body []byte, path string) (string, error) {
-	var result any
+	var result interface{}
 	if err := json.Unmarshal(body, &result); err != nil {
-		return "", fmt.Errorf("invalid JSON response: %w", err)
+		return "", fmt.Errorf("failed to parse API response: %w", err)
 	}
 
-	// Simple JSON path implementation
+	// Traverse path
 	parts := strings.Split(path, ".")
-	var current any = result
+	current := result
 
 	for _, part := range parts {
-		switch v := current.(type) {
-		case map[string]any:
-			current = v[part]
-		case []any:
-			index, err := strconv.Atoi(part)
-			if err != nil || index >= len(v) {
-				return "", fmt.Errorf("invalid array index in path")
+		switch val := current.(type) {
+		case map[string]interface{}:
+			if next, ok := val[part]; ok {
+				current = next
+			} else {
+				return "", fmt.Errorf("invalid response path: %s", path)
 			}
-			current = v[index]
+		case []interface{}:
+			idx, err := strconv.Atoi(part)
+			if err != nil || idx < 0 || idx >= len(val) {
+				return "", fmt.Errorf("invalid array index in path: %s", part)
+			}
+			current = val[idx]
 		default:
-			return "", fmt.Errorf("invalid response structure")
+			return "", fmt.Errorf("invalid structure at path segment: %s", part)
 		}
 	}
 
-	if str, ok := current.(string); ok {
-		return str, nil
+	if text, ok := current.(string); ok {
+		return text, nil
 	}
-	return "", fmt.Errorf("response text not found at path")
+
+	return "", fmt.Errorf("no valid string content found at path: %s", path)
 }
+
 func (s *SystemPromptService) checkGlobalRateLimit(ctx context.Context, clientIP string) error {
 
-	fmt.Printf("Rate Limit Config: %+v\n", s.cfg.RateLimit)
-	fmt.Printf("Environment RATE_LIMIT_ENABLED: %s\n", os.Getenv("RATE_LIMIT_ENABLED"))
-
-	fmt.Println("Checking rate limit")
-	fmt.Println("Checking rate limit")
-	fmt.Println(clientIP)
-	fmt.Println(clientIP)
 	if !s.cfg.RateLimit.Enabled {
 		return nil
 	}
@@ -267,28 +288,6 @@ func (s *SystemPromptService) checkGlobalRateLimit(ctx context.Context, clientIP
 
 	if count > int64(s.cfg.RateLimit.Requests) {
 		return fmt.Errorf("global rate limit exceeded")
-	}
-	return nil
-}
-
-func (s *SystemPromptService) checkRateLimit(ctx context.Context, module string, provider string) error {
-	var limit models.RateLimit
-	if err := s.db.Where("module_name = ? AND provider = ?", module, provider).First(&limit).Error; err != nil {
-		return nil
-	}
-
-	key := fmt.Sprintf("rl:%s:%s", module, provider)
-	count, err := s.redis.Incr(ctx, key).Result()
-	if err != nil {
-		return err
-	}
-
-	if count == 1 {
-		s.redis.Expire(ctx, key, time.Duration(limit.PerSeconds)*time.Second)
-	}
-
-	if count > int64(limit.MaxRequests) {
-		return fmt.Errorf("service rate limit exceeded")
 	}
 	return nil
 }
