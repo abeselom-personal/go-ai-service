@@ -1,4 +1,29 @@
+# Binaries
+*.exe
+*.out
+*.app
+
+# Build
+/build
+/dist
+
+# Go
+bin/
+*.test
+*.log
+
+# Modules
+vendor/
+
+# IDEs
+.vscode/
+.idea/
+
+# Env files
 .env
-.env
-.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
 .env
