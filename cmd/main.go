@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/abeselom-personal/go-ai-service/internal/config"
 	"github.com/abeselom-personal/go-ai-service/internal/database"
@@ -15,39 +19,38 @@ import (
 )
 
 func main() {
-	// Load configuration
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
 	cfg, err := config.LoadConfig("./config")
-
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
 
-	// Initialize logger
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	// Setup database connection
 	db, err := database.NewPostgresDB(database.Config{
-		Host:     cfg.Database.Host,
-		Port:     cfg.Database.Port,
-		User:     cfg.Database.User,
-		Password: cfg.Database.Password,
-		DBName:   cfg.Database.Name,
-		SSLMode:  cfg.Database.SSLMode,
+		Host:            cfg.Database.Host,
+		Port:            cfg.Database.Port,
+		User:            cfg.Database.User,
+		Password:        cfg.Database.Password,
+		DBName:          cfg.Database.Name,
+		SSLMode:         cfg.Database.SSLMode,
+		MaxIdleConns:    cfg.Database.MaxIdleConns,
+		MaxOpenConns:    cfg.Database.MaxOpenConns,
+		ConnMaxLifetime: cfg.Database.ConnMaxLifetime,
 	})
 	if err != nil {
 		logger.Fatal("failed to connect to database", zap.Error(err))
 	}
 
-	// Auto migrate if enabled
 	if cfg.Database.MigrationEnabled {
 		if err := db.AutoMigrate(&models.AIUsageLog{}, &models.RateLimit{}, &models.SystemPrompt{}); err != nil {
 			logger.Fatal("failed to migrate database", zap.Error(err))
 		}
 	}
+
 	redisClient, err := database.NewRedisClient(config.RedisConfig{
 		Host:     cfg.Redis.Host,
 		Port:     cfg.Redis.Port,
@@ -57,12 +60,10 @@ func main() {
 	if err != nil {
 		logger.Fatal("Redis connection failed", zap.Error(err))
 	}
-	// Initialize Gin router
-	router := gin.Default()
 
+	router := gin.Default()
 	routes.RegisterRoutes(router, db, cfg, redisClient)
 
-	// Start server
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      router,
@@ -71,9 +72,31 @@ func main() {
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
-	logger.Info("Starting server", zap.Int("port", cfg.Server.Port))
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	if err := server.ListenAndServe(); err != nil {
-		logger.Fatal("server failed to start", zap.Error(err))
+	go func() {
+		logger.Info("Starting server", zap.Int("port", cfg.Server.Port))
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("server failed to start", zap.Error(err))
+		}
+	}()
+
+	<-ctx.Done()
+	logger.Info("Shutting down server...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("Server forced to shutdown", zap.Error(err))
 	}
+
+	sqlDB, _ := db.DB()
+	if sqlDB != nil {
+		_ = sqlDB.Close()
+	}
+	_ = redisClient.Close()
+
+	logger.Info("Server exited")
 }

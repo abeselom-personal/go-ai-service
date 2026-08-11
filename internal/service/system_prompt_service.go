@@ -6,11 +6,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"text/template"
@@ -65,6 +63,8 @@ func (s *SystemPromptService) Update(ctx context.Context, id string, sys, user s
 		return err
 	}
 	sp.SystemPrompt = sys
+	sp.UserPrompt = user
+	sp.PromptHash = hashPrompt(sys, user, sp.ModuleName)
 	return s.repo.Update(ctx, &sp)
 }
 
@@ -73,17 +73,22 @@ func (s *SystemPromptService) Delete(ctx context.Context, id string) error {
 }
 
 func (s *SystemPromptService) getActiveProviderAndModel() (*config.ProviderConfig, *config.ModelConfig, error) {
+	activeProvider := s.cfg.Defaults.Provider
 	activeModel := s.cfg.Defaults.Model
 	for i := range s.cfg.Defaults.Providers {
 		provider := &s.cfg.Defaults.Providers[i]
+		if provider.Name != activeProvider {
+			continue
+		}
 		for j := range provider.Models {
 			model := &provider.Models[j]
 			if model.Name == activeModel {
 				return provider, model, nil
 			}
 		}
+		return nil, nil, fmt.Errorf("model %q not found in provider %q", activeModel, activeProvider)
 	}
-	return nil, nil, errors.New("active model not found in any provider")
+	return nil, nil, fmt.Errorf("provider %q not found in config", activeProvider)
 }
 
 func (s *SystemPromptService) SendPrompt(
@@ -118,17 +123,16 @@ func (s *SystemPromptService) SendPrompt(
 		return nil, err
 	}
 
-	// Store in database
 	logEntry := &models.AIUsageLog{
 		ModuleName: module,
 		Provider:   provider.Name,
 		PromptHash: hash,
-		Request:    sys + "\n" + user, // Store combined request
+		Request:    sys + "\n" + user,
 		Response:   response,
 	}
 
-	if err := s.db.Create(logEntry).Error; err != nil {
-		return nil, fmt.Errorf("failed to store response: %v", err)
+	if err := s.db.WithContext(ctx).Create(logEntry).Error; err != nil {
+		return nil, fmt.Errorf("failed to store response: %w", err)
 	}
 
 	return logEntry, nil
@@ -143,7 +147,7 @@ func (s *SystemPromptService) getCachedResponse(ctx context.Context, hash string
 		Error
 
 	if err != nil {
-		return nil, fmt.Errorf("cache miss: %v", err)
+		return nil, fmt.Errorf("cache miss: %w", err)
 	}
 	return &logEntry, nil
 }
@@ -169,8 +173,13 @@ func (s *SystemPromptService) callAIAPI(
 		return "", fmt.Errorf("template execution failed: %w", err)
 	}
 
-	// Create HTTP request
-	url := fmt.Sprintf("%s%s:generateContent", provider.BaseURL, model.Name)
+	// Build URL based on provider type
+	url := provider.BaseURL
+	if strings.Contains(provider.BaseURL, "%s") {
+		url = fmt.Sprintf(provider.BaseURL, model.Name)
+	} else {
+		url = strings.TrimSuffix(provider.BaseURL, "/") + "/" + model.Name
+	}
 	if provider.AuthMethod == "query_param" {
 		url += fmt.Sprintf("?key=%s", provider.APIKey)
 	}
@@ -240,14 +249,6 @@ func (s *SystemPromptService) extractResponse(body []byte, path string) (string,
 	return "", fmt.Errorf("response text not found at path")
 }
 func (s *SystemPromptService) checkGlobalRateLimit(ctx context.Context, clientIP string) error {
-
-	fmt.Printf("Rate Limit Config: %+v\n", s.cfg.RateLimit)
-	fmt.Printf("Environment RATE_LIMIT_ENABLED: %s\n", os.Getenv("RATE_LIMIT_ENABLED"))
-
-	fmt.Println("Checking rate limit")
-	fmt.Println("Checking rate limit")
-	fmt.Println(clientIP)
-	fmt.Println(clientIP)
 	if !s.cfg.RateLimit.Enabled {
 		return nil
 	}
@@ -258,37 +259,22 @@ func (s *SystemPromptService) checkGlobalRateLimit(ctx context.Context, clientIP
 		}
 	}
 
-	window, _ := time.ParseDuration(s.cfg.RateLimit.Window)
+	window, err := time.ParseDuration(s.cfg.RateLimit.Window)
+	if err != nil {
+		return fmt.Errorf("invalid rate limit window: %w", err)
+	}
+
 	key := fmt.Sprintf("rl:global:%s", clientIP)
-	count, _ := s.redis.Incr(ctx, key).Result()
+	count, err := s.redis.Incr(ctx, key).Result()
+	if err != nil {
+		return fmt.Errorf("rate limiter unavailable: %w", err)
+	}
 	if count == 1 {
 		s.redis.Expire(ctx, key, window)
 	}
 
 	if count > int64(s.cfg.RateLimit.Requests) {
 		return fmt.Errorf("global rate limit exceeded")
-	}
-	return nil
-}
-
-func (s *SystemPromptService) checkRateLimit(ctx context.Context, module string, provider string) error {
-	var limit models.RateLimit
-	if err := s.db.Where("module_name = ? AND provider = ?", module, provider).First(&limit).Error; err != nil {
-		return nil
-	}
-
-	key := fmt.Sprintf("rl:%s:%s", module, provider)
-	count, err := s.redis.Incr(ctx, key).Result()
-	if err != nil {
-		return err
-	}
-
-	if count == 1 {
-		s.redis.Expire(ctx, key, time.Duration(limit.PerSeconds)*time.Second)
-	}
-
-	if count > int64(limit.MaxRequests) {
-		return fmt.Errorf("service rate limit exceeded")
 	}
 	return nil
 }

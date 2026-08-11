@@ -27,3 +27,6 @@ vendor/
 .DS_Store
 Thumbs.db
 .env
+
+# Air build output
+tmp/

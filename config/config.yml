@@ -5,16 +5,16 @@ server:
   idle_timeout: 60s
 
 database:
-  host: postgres
+  host: ${DB_HOST:postgres}
   port: 5432
-  user: admin
-  password: secret
-  name: providers
+  user: ${DB_USER:admin}
+  password: ${DB_PASSWORD:secret}
+  name: ${DB_NAME:providers}
   ssl_mode: disable
   max_idle_conns: 10
   max_open_conns: 100
   conn_max_lifetime: 1h
-  migration_enabled: false 
+  migration_enabled: false
 
 security:
   encryption_key: ""

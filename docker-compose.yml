@@ -1,14 +1,15 @@
 services:
   ai-service:
-    build: ./ai-service/
+    build: .
     ports:
       - "8082:8080"
     volumes:
-      - ./ai-service:/app
+      - .:/app
     env_file:
-      - ./ai-service/.env
+      - .env
     depends_on:
-      - db
+      - ai-database
+      - redis
     networks:
       - app-network
 
@@ -16,19 +17,21 @@ services:
     image: postgres:latest
     restart: always
     env_file:
-      - ./ai-service/.env
+      - .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: mydb
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-mydb}
     ports:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
       - app-network
+
   redis:
     image: redis:alpine
+    restart: always
     ports:
       - "6379:6379"
     volumes:

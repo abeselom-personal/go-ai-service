@@ -22,6 +22,10 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB, cfg *config.Config, redisClient 
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
 	r.SetHTMLTemplate(tmpl)
 
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
 	r.GET("/ai/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
 			"Title": "AI System Prompts Manager",

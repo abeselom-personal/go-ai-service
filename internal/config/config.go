@@ -109,6 +109,8 @@ func LoadConfig(path string) (*Config, error) {
 	v.SetDefault("rate_limit.enabled", true)
 	v.SetDefault("rate_limit.requests", 100)
 	v.SetDefault("rate_limit.window", "1m")
+	v.SetDefault("rate_limit.ip_whitelist", []string{"127.0.0.1"})
+
 	// Bind environment variables to config paths
 	_ = v.BindEnv("server.port", "PORT")
 	_ = v.BindEnv("server.read_timeout", "READ_TIMEOUT")
@@ -135,34 +137,22 @@ func LoadConfig(path string) (*Config, error) {
 	_ = v.BindEnv("logging.level", "LOG_LEVEL")
 	_ = v.BindEnv("logging.format", "LOG_FORMAT")
 
-	v.SetDefault("rate_limit.enabled", true)
-	v.SetDefault("rate_limit.requests", 1)
-	v.SetDefault("rate_limit.window", "1m")
-	v.SetDefault("rate_limit.ip_whitelist", []string{"127.0.0.1"})
-
 	_ = v.BindEnv("redis.host", "REDIS_HOST")
 	_ = v.BindEnv("redis.port", "REDIS_PORT")
 	_ = v.BindEnv("redis.password", "REDIS_PASSWORD")
 	_ = v.BindEnv("redis.db", "REDIS_DB")
+
 	// Configuration sources
 	v.AddConfigPath(path)
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 	v.AutomaticEnv()
 
-	// Bind environment variables
-	_ = v.BindEnv("security.encryption_key", "ENCRYPTION_KEY")
-	_ = v.BindEnv("database.password", "DB_PASSWORD")
-
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("failed to read config file: %w", err)
 		}
 	}
-	fmt.Println("Before environment processing:")
-	fmt.Printf("Rate limit enabled: %v\n", v.GetBool("rate_limit.enabled"))
-	fmt.Printf("Rate limit requests: %v\n", v.GetFloat64("rate_limit.requests"))
-
 	// Explicit environment processing AFTER config file read
 	if enabled := os.Getenv("RATE_LIMIT_ENABLED"); enabled != "" {
 		v.Set("rate_limit.enabled", enabled == "true")
@@ -179,10 +169,6 @@ func LoadConfig(path string) (*Config, error) {
 		v.Set("rate_limit.ip_whitelist", strings.Split(ipWL, ","))
 	}
 
-	// Add debug logging AFTER environment processing
-	fmt.Println("\nAfter environment processing:")
-	fmt.Printf("Rate limit enabled: %v\n", v.GetBool("rate_limit.enabled"))
-	fmt.Printf("Rate limit requests: %v\n", v.GetFloat64("rate_limit.requests"))
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
@@ -202,7 +188,6 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("encryption key is required")
 	}
 
-	fmt.Println(cfg.Security.EncryptionKey)
 	if len(cfg.Security.EncryptionKey) != 32 {
 		return fmt.Errorf("encryption key must be 32 bytes")
 	}

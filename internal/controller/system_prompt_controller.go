@@ -2,12 +2,14 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/abeselom-personal/go-ai-service/internal/service"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type SystemPromptController struct {
@@ -38,12 +40,16 @@ func (c *SystemPromptController) Create(ctx *gin.Context) {
 }
 
 func (c *SystemPromptController) Get(ctx *gin.Context) {
-	prompt, err := c.svc.Get(ctx)
+	prompts, err := c.svc.Get(ctx)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Prompt not found"})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Prompt not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, prompt)
+	ctx.JSON(http.StatusOK, prompts)
 }
 
 func (c *SystemPromptController) Update(ctx *gin.Context) {
@@ -57,6 +63,10 @@ func (c *SystemPromptController) Update(ctx *gin.Context) {
 		return
 	}
 	if err := c.svc.Update(ctx, id, req.SystemPrompt, req.UserPrompt); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Prompt not found"})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -84,7 +94,6 @@ func (c *SystemPromptController) Send(ctx *gin.Context) {
 		return
 	}
 
-	// Get cache control parameter
 	bypassCache, _ := strconv.ParseBool(ctx.Query("cache"))
 
 	clientIP := ctx.ClientIP()
@@ -98,7 +107,11 @@ func (c *SystemPromptController) Send(ctx *gin.Context) {
 	)
 
 	if err != nil {
-		ctx.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
+		if err.Error() == "global rate limit exceeded" {
+			ctx.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
